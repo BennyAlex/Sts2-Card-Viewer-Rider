@@ -1,0 +1,31 @@
+<idea-plugin>
+  <id>com.jetbrains.rider.plugins.sts2cardviewer</id>
+  <name>STS2 Card Viewer</name>
+  <version>1.0.0</version>
+  <vendor>STS2 Card Viewer</vendor>
+
+  <description>
+<![CDATA[
+<p>Visual card and relic browser for Slay the Spire 2 mods.</p>
+<ul>
+  <li>Browse custom cards and relics in a visual grid</li>
+  <li>Filter by name, type, and rarity</li>
+  <li>Switch between localization languages</li>
+  <li>View card preview when opening card .cs files</li>
+</ul>
+]]>
+  </description>
+
+  <depends>com.intellij.modules.platform</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <toolWindow id="STS2 Card Viewer" anchor="right"
+                factoryClass="com.jetbrains.rider.plugins.sts2cardviewer.Sts2ToolWindowFactory"
+                icon="/icons/card_preview.svg"/>
+    <applicationService serviceImplementation="com.jetbrains.rider.plugins.sts2cardviewer.Sts2CardViewerSettings"/>
+    <applicationConfigurable parentId="tools"
+                             instance="com.jetbrains.rider.plugins.sts2cardviewer.Sts2CardViewerConfigurable"
+                             displayName="STS2 Card Viewer"/>
+  </extensions>
+
+</idea-plugin>
