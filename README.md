@@ -15,7 +15,9 @@ A **Rider / ReSharper** plugin that provides a visual card and relic browser for
 
 ## Screenshots
 
-> _Screenshots coming soon. If you'd like to contribute one, open a PR!_
+<img width="2472" height="1952" alt="image" src="https://github.com/user-attachments/assets/7053fbf4-893d-4ad4-9281-33592bde9ef0" />
+
+<img width="2152" height="1078" alt="image" src="https://github.com/user-attachments/assets/a07fa285-0e91-41f8-8e9d-79cfaaa28dac" />
 
 ## Requirements
 
