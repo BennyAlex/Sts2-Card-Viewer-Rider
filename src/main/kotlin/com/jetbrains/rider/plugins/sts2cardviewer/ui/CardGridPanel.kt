@@ -14,6 +14,49 @@ import javax.swing.*
 import javax.swing.border.AbstractBorder
 import javax.swing.text.View
 import java.awt.geom.RoundRectangle2D
+import javax.swing.text.*
+
+class WrapEditorKit : StyledEditorKit() {
+    private val defaultFactory = WrapColumnFactory()
+    override fun getViewFactory(): ViewFactory = defaultFactory
+}
+
+class WrapColumnFactory : ViewFactory {
+    override fun create(elem: Element): View {
+        return when (elem.name) {
+            AbstractDocument.ContentElementName -> WrapLabelView(elem)
+            AbstractDocument.ParagraphElementName -> ParagraphView(elem)
+            AbstractDocument.SectionElementName -> BoxView(elem, View.Y_AXIS)
+            StyleConstants.ComponentElementName -> ComponentView(elem)
+            StyleConstants.IconElementName -> IconView(elem)
+            else -> LabelView(elem)
+        }
+    }
+}
+
+class WrapLabelView(elem: Element) : LabelView(elem) {
+    override fun getBreakWeight(axis: Int, pos: Float, len: Float): Int {
+        if (axis == View.X_AXIS) {
+            checkPainter()
+            val p0 = startOffset
+            val p1 = glyphPainter.getBoundedPosition(this, p0, pos, len)
+            if (p1 == p0) return View.BadBreakWeight
+            // The magic line: tells Swing it's okay to break mid-word
+            return View.GoodBreakWeight 
+        }
+        return super.getBreakWeight(axis, pos, len)
+    }
+
+    override fun breakView(axis: Int, p0: Int, pos: Float, len: Float): View {
+        if (axis == View.X_AXIS) {
+            checkPainter()
+            val p1 = glyphPainter.getBoundedPosition(this, p0, pos, len)
+            if (p0 == startOffset && p1 == endOffset) return this
+            return createFragment(p0, p1)
+        }
+        return super.breakView(axis, p0, pos, len)
+    }
+}
 
 class CardGridPanel : JPanel() {
 
@@ -278,7 +321,7 @@ class CardGridPanel : JPanel() {
 
         val typeRarityRow = JPanel(BorderLayout()).apply {
             isOpaque = false
-            border = javax.swing.border.EmptyBorder(3, 7, 6, 7)
+            border = javax.swing.border.EmptyBorder(3, 9, 3, 9)
             alignmentX = Component.CENTER_ALIGNMENT
         }
 
@@ -306,50 +349,57 @@ class CardGridPanel : JPanel() {
         // Using BorderLayout for the info panel to prevent squishing
         val info = JPanel(BorderLayout()).apply {
             isOpaque = false
-            border = javax.swing.border.EmptyBorder(4, 14, 8, 14)
+            border = javax.swing.border.EmptyBorder(2, 14, 2, 14)
             alignmentX = Component.CENTER_ALIGNMENT 
         }
 
         val descLabel = object : JTextPane() {
             override fun getPreferredSize(): Dimension {
-                // Force wrap at 193px (221px width - 28px horizontal padding)
                 val fixedWidth = 193
                 setSize(fixedWidth, Short.MAX_VALUE.toInt())
                 return Dimension(fixedWidth, super.getPreferredSize().height)
             }
             override fun getMaximumSize() = Dimension(193, Short.MAX_VALUE.toInt())
         }.apply {
+            // Apply our custom word-wrapping logic here
+            editorKit = WrapEditorKit() 
+            
             isEditable = false
             isOpaque = false
-            background = Color(0, 0, 0, 0)
-            border = null
-            addMouseListener(object : MouseAdapter() {
-                override fun mouseClicked(e: MouseEvent) {
-                    if (SwingUtilities.isLeftMouseButton(e)) onCardSelected?.invoke(card)
-                }
-            })
+            // ... rest of your setup ...
         }
         
         CardDetailPanel.setStyledText(descLabel, card.description, settings.gridDescFontSize + 2)
+        
         info.add(descLabel, BorderLayout.NORTH)
 
         if (card.keywords.isNotEmpty()) {
-            val kwPanel = JPanel(FlowLayout(FlowLayout.LEFT, 3, 0)).apply {
+            // 1. Switch to BoxLayout (X_AXIS) to remove the automatic outer left-margin
+            val kwPanel = JPanel().apply {
+                layout = BoxLayout(this, BoxLayout.X_AXIS)
                 isOpaque = false
-                border = javax.swing.border.EmptyBorder(0, 0, 0, 0)
+                border = javax.swing.border.EmptyBorder(3, 0, 0, 0)
+                alignmentX = Component.LEFT_ALIGNMENT
             }
-            for (kw in card.keywords) {
+            
+            for ((index, kw) in card.keywords.withIndex()) {
+                // 2. Add an exact 8px gap BEFORE every tag except the first one
+                if (index > 0) {
+                    kwPanel.add(Box.createHorizontalStrut(4))
+                }
+                
                 kwPanel.add(JLabel(kw).apply {
-                    font = Font("Dialog", Font.PLAIN, 8)
-                    foreground = Color(196, 181, 253)
+                    font = Font("Dialog", Font.BOLD, settings.gridDescFontSize - 1)
+                    foreground = Color(0, 0, 0)
                     border = BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(Color(139, 92, 246, 80), 1),
+                        BorderFactory.createLineBorder(Color(220, 220, 220), 1),
                         BorderFactory.createEmptyBorder(1, 4, 1, 4)
                     )
                     isOpaque = true
-                    background = Color(139, 92, 246, 30)
+                    background = Color(220, 220, 220, 210)
                 })
             }
+            // Align the panel to the west/left in the BorderLayout
             info.add(kwPanel, BorderLayout.SOUTH)
         }
 

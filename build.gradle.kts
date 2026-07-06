@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.jetbrains.rider.plugins.sts2cardviewer"
-version = "1.0.0"
+version = "1.1.0"
 
 repositories {
     maven { setUrl("https://cache-redirector.jetbrains.com/maven-central") }

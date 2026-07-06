@@ -45,11 +45,7 @@ This launches a sandboxed Rider/IntelliJ with the plugin loaded.
 
 ## Installation
 
-1. Open **Rider** → **Settings** → **Plugins** → ** Marketplace**
-2. Search for "STS2 Card Viewer"
-3. Click **Install**
-
-> Or install from disk: *Settings → Plugins → ⚙ → Install Plugin from Disk…*
+1. Open *Rider → Settings → Plugins → ⚙ → Install Plugin from Disk…*
 
 ## Usage
 
@@ -85,4 +81,4 @@ src/main/kotlin/com/jetbrains/rider/plugins/sts2cardviewer/
 
 ## License
 
-MIT
+GNU AFFERO GENERAL PUBLIC LICENSE

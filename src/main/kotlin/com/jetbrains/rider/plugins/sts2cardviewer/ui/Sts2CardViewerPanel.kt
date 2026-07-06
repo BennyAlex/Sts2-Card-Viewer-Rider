@@ -1,7 +1,11 @@
 package com.jetbrains.rider.plugins.sts2cardviewer.ui
 
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.FileEditorManagerEvent
+import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
@@ -21,6 +25,7 @@ class Sts2CardViewerPanel(private val project: Project) {
     private val cardGrid = CardGridPanel()
     private val relicList = RelicListPanel()
     private val detailPanel = CardDetailPanel(project)
+    private val tabbedPane = JTabbedPane()
     private val filterToolbar = FilterToolbar()
     private val languageCombo = LanguageComboBox()
 
@@ -50,7 +55,7 @@ class Sts2CardViewerPanel(private val project: Project) {
                 add(rightPanel, BorderLayout.EAST)
             }
 
-            val tabbedPane = JTabbedPane().apply {
+            tabbedPane.apply {
                 addTab("Cards", cardGrid)
                 addTab("Relics", relicList)
             }
@@ -72,6 +77,17 @@ class Sts2CardViewerPanel(private val project: Project) {
             applyFilters(text, type, rarity, target, keyword)
         }
         languageCombo.onLanguageChanged = { langCode: String -> switchLanguage(langCode) }
+
+        project.messageBus.connect().subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER,
+            object : FileEditorManagerListener {
+                override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
+                    handleEditorFile(file)
+                }
+                override fun selectionChanged(event: FileEditorManagerEvent) {
+                    event.newFile?.let { handleEditorFile(it) }
+                }
+            }
+        )
     }
 
     private fun loadData() {
@@ -326,5 +342,28 @@ class Sts2CardViewerPanel(private val project: Project) {
         }
 
         return basePath
+    }
+
+    private fun handleEditorFile(file: VirtualFile) {
+        if (file.extension != "cs") return
+        val info = modInfo ?: return
+        val path = file.path.replace('\\', '/')
+
+        val card = allCards.find { it.filePath?.replace('\\', '/') == path }
+        if (card != null) {
+            SwingUtilities.invokeLater {
+                tabbedPane.selectedIndex = 0
+                detailPanel.showCard(card, info)
+            }
+            return
+        }
+
+        val relic = allRelics.find { it.filePath?.replace('\\', '/') == path }
+        if (relic != null) {
+            SwingUtilities.invokeLater {
+                tabbedPane.selectedIndex = 1
+                detailPanel.showRelic(relic, info)
+            }
+        }
     }
 }
