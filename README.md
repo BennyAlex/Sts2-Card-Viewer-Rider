@@ -15,9 +15,12 @@ A **Rider / ReSharper** plugin that provides a visual card and relic browser for
 
 ## Screenshots
 
-<img width="2472" height="1952" alt="image" src="https://github.com/user-attachments/assets/7053fbf4-893d-4ad4-9281-33592bde9ef0" />
+<img width="3180" height="1964" alt="image" src="https://github.com/user-attachments/assets/b9318f1e-661d-43c8-8030-84d55db06fc6" />
 
-<img width="2152" height="1078" alt="image" src="https://github.com/user-attachments/assets/a07fa285-0e91-41f8-8e9d-79cfaaa28dac" />
+<img width="2820" height="1270" alt="image" src="https://github.com/user-attachments/assets/64ce25ec-efa6-4840-908f-e3a2b039c9ef" />
+
+<img width="2928" height="1928" alt="image" src="https://github.com/user-attachments/assets/3ceeec78-246e-407c-95ab-9c2ecc09af94" />
+
 
 ## Requirements
 
