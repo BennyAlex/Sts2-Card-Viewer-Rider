@@ -25,14 +25,23 @@ class RelicListPanel : JPanel() {
         horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
     }
 
+    private val countLabel = JLabel("").apply {
+        font = Font("Dialog", Font.PLAIN, 12)
+        foreground = UIManager.getColor("Label.foreground")
+        border = EmptyBorder(4, 8, 4, 8)
+    }
+
     init {
         layout = BorderLayout()
+        add(countLabel, BorderLayout.NORTH)
         add(scrollPane, BorderLayout.CENTER)
     }
 
-    fun setRelics(relics: List<RelicData>, modInfo: ModInfo? = null) {
+    fun setRelics(relics: List<RelicData>, modInfo: ModInfo? = null, totalCount: Int = relics.size) {
         currentModInfo = modInfo
         listPanel.removeAll()
+
+        countLabel.text = "${relics.size} of $totalCount"
 
         for (relic in relics) {
             listPanel.add(createRelicRow(relic))

@@ -56,8 +56,8 @@ class Sts2CardViewerPanel(private val project: Project) {
             }
 
             tabbedPane.apply {
-                addTab("Cards", cardGrid)
-                addTab("Relics", relicList)
+                addTab("Cards (0)", cardGrid)
+                addTab("Relics (0)", relicList)
             }
 
             val splitPane = JSplitPane(JSplitPane.HORIZONTAL_SPLIT, tabbedPane, detailPanel.mainPanel).apply {
@@ -192,8 +192,9 @@ class Sts2CardViewerPanel(private val project: Project) {
             val allTargets = allCards.mapNotNull { it.target }.distinct().sorted()
             filterToolbar.setKeywords(allKeywords)
             filterToolbar.setTargets(allTargets)
-            cardGrid.setCards(allCards, modInfo)
-            relicList.setRelics(allRelics, modInfo)
+            updateTabTitles()
+            cardGrid.setCards(allCards, modInfo, allCards.size)
+            relicList.setRelics(allRelics, modInfo, allRelics.size)
         }
         } catch (e: Exception) {
             LOG.error("[STS2CardViewer] Exception in loadData", e)
@@ -222,10 +223,15 @@ class Sts2CardViewerPanel(private val project: Project) {
         }
 
         SwingUtilities.invokeLater {
-            cardGrid.setCards(allCards, modInfo)
-            relicList.setRelics(allRelics, modInfo)
+            cardGrid.setCards(allCards, modInfo, allCards.size)
+            relicList.setRelics(allRelics, modInfo, allRelics.size)
             detailPanel.clear()
         }
+    }
+
+    private fun updateTabTitles() {
+        tabbedPane.setTitleAt(0, "Cards (${allCards.size})")
+        tabbedPane.setTitleAt(1, "Relics (${allRelics.size})")
     }
 
     private fun applyFilters(searchText: String, typeFilter: String, rarityFilter: String, targetFilter: String, keywordFilter: String) {
@@ -240,7 +246,7 @@ class Sts2CardViewerPanel(private val project: Project) {
             val matchesKeyword = keywordFilter == "All" || card.keywords.any { it.equals(keywordFilter, ignoreCase = true) }
             matchesSearch && matchesType && matchesRarity && matchesTarget && matchesKeyword
         }
-        cardGrid.setCards(filtered, modInfo)
+        cardGrid.setCards(filtered, modInfo, allCards.size)
     }
 
     private fun handleFileChanges(changedPaths: List<String>) {
@@ -316,9 +322,10 @@ class Sts2CardViewerPanel(private val project: Project) {
                 val allTargets = allCards.mapNotNull { it.target }.distinct().sorted()
                 filterToolbar.setKeywords(allKeywords)
                 filterToolbar.setTargets(allTargets)
-                cardGrid.setCards(allCards, modInfo)
+                cardGrid.setCards(allCards, modInfo, allCards.size)
             }
-            if (relicsChanged) relicList.setRelics(allRelics, modInfo)
+            if (relicsChanged) relicList.setRelics(allRelics, modInfo, allRelics.size)
+            if (cardsChanged || relicsChanged) updateTabTitles()
             if (currentCardFile != null && changedPaths.any { it.replace('\\', '/') == currentCardFile }) {
                 val card = allCards.find { it.filePath?.replace('\\', '/') == currentCardFile }
                 if (card != null) detailPanel.showCard(card, modInfo)

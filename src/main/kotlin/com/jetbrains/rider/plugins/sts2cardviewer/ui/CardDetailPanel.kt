@@ -144,6 +144,7 @@ class CardDetailPanel(private val project: Project) {
                     isOpaque = false
                     border = null
                     alignmentX = Component.LEFT_ALIGNMENT
+                    maximumSize = Dimension(350, Int.MAX_VALUE)
                 }
 
                 statsLabel.apply {
@@ -155,7 +156,7 @@ class CardDetailPanel(private val project: Project) {
                 keywordsPanel.apply {
                     isOpaque = false
                     alignmentX = Component.LEFT_ALIGNMENT
-                    maximumSize = Dimension(250, 60)
+                    maximumSize = Dimension(350, 60)
                 }
 
                 filePathLabel.apply {

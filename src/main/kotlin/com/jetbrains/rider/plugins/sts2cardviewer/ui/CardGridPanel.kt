@@ -12,6 +12,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.*
 import javax.swing.border.AbstractBorder
+import javax.swing.border.EmptyBorder
 import javax.swing.text.View
 import java.awt.geom.RoundRectangle2D
 import javax.swing.text.*
@@ -40,9 +41,22 @@ class WrapLabelView(elem: Element) : LabelView(elem) {
             checkPainter()
             val p0 = startOffset
             val p1 = glyphPainter.getBoundedPosition(this, p0, pos, len)
-            if (p1 == p0) return View.BadBreakWeight
-            // The magic line: tells Swing it's okay to break mid-word
-            return View.GoodBreakWeight 
+
+            val defaultWeight = super.getBreakWeight(axis, pos, len)
+
+            // 1. If the text chunk can fully fit on the remaining line, OR if standard 
+            // layout finds a natural break point (like a space -> ExcellentBreakWeight), 
+            // allow it to behave normally.
+            if (p1 == endOffset || defaultWeight >= View.ExcellentBreakWeight) {
+                return defaultWeight
+            }
+
+            // 2. The word does NOT fully fit, and there are NO spaces.
+            // Return BadBreakWeight. This forces the layout engine to abandon breaking here
+            // and instead push the ENTIRE word down to the next line.
+            // (If the word is an ultra-long string that won't even fit on a fresh line, 
+            // standard Swing mechanics will automatically fall back to breaking it mid-word).
+            return View.BadBreakWeight
         }
         return super.getBreakWeight(axis, pos, len)
     }
@@ -95,8 +109,15 @@ class CardGridPanel : JPanel() {
         horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
     }
 
+    private val countLabel = JLabel("").apply {
+        font = Font("Dialog", Font.PLAIN, 12)
+        foreground = UIManager.getColor("Label.foreground")
+        border = EmptyBorder(4, 8, 4, 8)
+    }
+
     init {
         layout = BorderLayout()
+        add(countLabel, BorderLayout.NORTH)
         add(scrollPane, BorderLayout.CENTER)
 
         scrollPane.addComponentListener(object : ComponentAdapter() {
@@ -106,7 +127,7 @@ class CardGridPanel : JPanel() {
         })
     }
 
-    fun setCards(cards: List<CardData>, modInfo: ModInfo? = null) {
+    fun setCards(cards: List<CardData>, modInfo: ModInfo? = null, totalCount: Int = cards.size) {
         currentModInfo = modInfo
 
         val modId = modInfo?.modId
@@ -123,6 +144,7 @@ class CardGridPanel : JPanel() {
             }
         }
 
+        countLabel.text = "${cards.size} of $totalCount"
         currentColumns = 0
         currentFilteredList = cards
         relayout(cards)
@@ -132,7 +154,7 @@ class CardGridPanel : JPanel() {
         val availableWidth = scrollPane.viewport.width
         if (availableWidth <= 0) return
 
-        val cellWidth = 221
+        val cellWidth = 237
         val columns = maxOf(1, availableWidth / cellWidth)
         if (columns == currentColumns && gridPanel.componentCount > 0) return
         currentColumns = columns
@@ -396,7 +418,7 @@ class CardGridPanel : JPanel() {
                         BorderFactory.createEmptyBorder(1, 4, 1, 4)
                     )
                     isOpaque = true
-                    background = Color(220, 220, 220, 210)
+                    background = Color(220, 220, 220, 220)
                 })
             }
             // Align the panel to the west/left in the BorderLayout
