@@ -36,39 +36,117 @@ class WrapColumnFactory : ViewFactory {
 }
 
 class WrapLabelView(elem: Element) : LabelView(elem) {
+    override fun getMinimumSpan(axis: Int): Float {
+        return if (axis == View.X_AXIS) 0f else super.getMinimumSpan(axis)
+    }
+
     override fun getBreakWeight(axis: Int, pos: Float, len: Float): Int {
-        if (axis == View.X_AXIS) {
-            checkPainter()
-            val p0 = startOffset
-            val p1 = glyphPainter.getBoundedPosition(this, p0, pos, len)
+        if (axis != View.X_AXIS) return super.getBreakWeight(axis, pos, len)
 
-            val defaultWeight = super.getBreakWeight(axis, pos, len)
+        checkPainter()
 
-            // 1. If the text chunk can fully fit on the remaining line, OR if standard 
-            // layout finds a natural break point (like a space -> ExcellentBreakWeight), 
-            // allow it to behave normally.
-            if (p1 == endOffset || defaultWeight >= View.ExcellentBreakWeight) {
-                return defaultWeight
-            }
+        val p0 = startOffset
+        val p1 = glyphPainter.getBoundedPosition(this, p0, pos, len)
 
-            // 2. The word does NOT fully fit, and there are NO spaces.
-            // Return BadBreakWeight. This forces the layout engine to abandon breaking here
-            // and instead push the ENTIRE word down to the next line.
-            // (If the word is an ultra-long string that won't even fit on a fresh line, 
-            // standard Swing mechanics will automatically fall back to breaking it mid-word).
+        if (p1 >= endOffset) {
+            return View.GoodBreakWeight
+        }
+
+        if (findBreakPosition(p0, p1) > p0) {
+            return View.ExcellentBreakWeight
+        }
+
+        val tokenStart = findTokenStart(p0)
+        val tokenEnd = findTokenEnd(p0)
+        val tokenWidth = getPartialSpan(tokenStart, tokenEnd)
+        val fullLineWidth = getFullLineWidth()
+
+        if (tokenWidth <= fullLineWidth) {
             return View.BadBreakWeight
         }
-        return super.getBreakWeight(axis, pos, len)
+
+        return if (len >= fullLineWidth - 2f) {
+            View.GoodBreakWeight
+        } else {
+            View.BadBreakWeight
+        }
     }
 
     override fun breakView(axis: Int, p0: Int, pos: Float, len: Float): View {
-        if (axis == View.X_AXIS) {
-            checkPainter()
-            val p1 = glyphPainter.getBoundedPosition(this, p0, pos, len)
-            if (p0 == startOffset && p1 == endOffset) return this
-            return createFragment(p0, p1)
+        if (axis != View.X_AXIS) return super.breakView(axis, p0, pos, len)
+
+        checkPainter()
+
+        val p1 = glyphPainter.getBoundedPosition(this, p0, pos, len)
+
+        if (p1 >= endOffset) {
+            return if (p0 == startOffset) this else createFragment(p0, endOffset)
         }
-        return super.breakView(axis, p0, pos, len)
+
+        val naturalBreak = findBreakPosition(p0, p1)
+        if (naturalBreak > p0) {
+            return createFragment(p0, naturalBreak)
+        }
+
+        val tokenStart = findTokenStart(p0)
+        val tokenEnd = findTokenEnd(p0)
+        val tokenWidth = getPartialSpan(tokenStart, tokenEnd)
+        val fullLineWidth = getFullLineWidth()
+
+        if (tokenWidth > fullLineWidth && len >= fullLineWidth - 2f) {
+            val safeEnd = p1.coerceAtLeast(p0 + 1).coerceAtMost(endOffset)
+            return createFragment(p0, safeEnd)
+        }
+
+        return if (p0 == startOffset) this else createFragment(p0, endOffset)
+    }
+
+    private fun getFullLineWidth(): Float {
+        val c = container
+        if (c is JTextComponent) {
+            val insets = c.insets
+            val width = c.width - insets.left - insets.right
+            if (width > 0) return width.toFloat()
+        }
+        return 193f
+    }
+
+    private fun findBreakPosition(from: Int, to: Int): Int {
+        val safeFrom = from.coerceIn(startOffset, endOffset)
+        val safeTo = to.coerceIn(safeFrom, endOffset)
+        if (safeTo <= safeFrom) return -1
+
+        val text = document.getText(safeFrom, safeTo - safeFrom)
+        for (i in text.length - 1 downTo 0) {
+            if (isNaturalBreakChar(text[i])) {
+                return safeFrom + i + 1
+            }
+        }
+        return -1
+    }
+
+    private fun findTokenStart(offset: Int): Int {
+        var p = offset.coerceIn(startOffset, endOffset)
+        while (p > startOffset) {
+            val ch = document.getText(p - 1, 1)[0]
+            if (isNaturalBreakChar(ch)) break
+            p--
+        }
+        return p
+    }
+
+    private fun findTokenEnd(offset: Int): Int {
+        var p = offset.coerceIn(startOffset, endOffset)
+        while (p < endOffset) {
+            val ch = document.getText(p, 1)[0]
+            if (isNaturalBreakChar(ch)) break
+            p++
+        }
+        return p
+    }
+
+    private fun isNaturalBreakChar(ch: Char): Boolean {
+        return ch.isWhitespace() || ch == '-' || ch == '/' || ch == ':'
     }
 }
 
@@ -95,6 +173,7 @@ class CardGridPanel : JPanel() {
     private var currentFilteredList: List<CardData>? = null
 
     private val cardCellMap = LinkedHashMap<String, Pair<CardData, JPanel>>()
+    fun invalidateCell(className: String) { cardCellMap.remove(className) }
     private var cachedEnergyIcon: Image? = null
     private var cachedEnergyIconModId: String? = null
 

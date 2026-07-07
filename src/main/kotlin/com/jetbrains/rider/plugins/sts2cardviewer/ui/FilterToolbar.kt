@@ -16,13 +16,15 @@ fun formatTargetName(target: String): String {
 class FilterToolbar {
 
     val mainPanel: JPanel
-    var onFilterChanged: ((text: String, type: String, rarity: String, target: String, keyword: String) -> Unit)? = null
+    var onFilterChanged: ((text: String, type: String, rarity: String, target: String, keyword: String, cost: String, image: String) -> Unit)? = null
 
     private val searchField = JTextField(20)
     private val typeCombo = JComboBox(arrayOf("All", "Attack", "Skill", "Power"))
     private val rarityCombo = JComboBox(arrayOf("All", "Basic", "Common", "Uncommon", "Rare", "Ancient", "Token"))
     private val targetCombo = JComboBox(arrayOf("All"))
     private val keywordCombo = JComboBox(arrayOf("All"))
+    private val costCombo = JComboBox(arrayOf("All", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"))
+    private val imageCombo = JComboBox(arrayOf("All", "With Image", "Without Image"))
     private var debounceTimer: Timer? = null
 
     init {
@@ -40,26 +42,38 @@ class FilterToolbar {
             }
 
             typeCombo.apply {
-                preferredSize = Dimension(135, 28)
+                preferredSize = Dimension(85, 28)
                 toolTipText = "Filter by card type"
                 addActionListener { fireFilter() }
             }
 
             rarityCombo.apply {
-                preferredSize = Dimension(135, 28)
+                preferredSize = Dimension(120, 28)
                 toolTipText = "Filter by rarity"
                 addActionListener { fireFilter() }
             }
 
             targetCombo.apply {
-                preferredSize = Dimension(135, 28)
+                preferredSize = Dimension(140, 28)
                 toolTipText = "Filter by target"
                 addActionListener { fireFilter() }
             }
 
             keywordCombo.apply {
-                preferredSize = Dimension(135, 28)
+                preferredSize = Dimension(110, 28)
                 toolTipText = "Filter by keyword"
+                addActionListener { fireFilter() }
+            }
+
+            costCombo.apply {
+                preferredSize = Dimension(60, 28)
+                toolTipText = "Filter by cost"
+                addActionListener { fireFilter() }
+            }
+
+            imageCombo.apply {
+                preferredSize = Dimension(135, 28)
+                toolTipText = "Filter by image status"
                 addActionListener { fireFilter() }
             }
 
@@ -88,6 +102,16 @@ class FilterToolbar {
                 foreground = Color(160, 160, 160)
             })
             add(keywordCombo)
+            add(JLabel("Cost:").apply {
+                font = Font("Dialog", Font.PLAIN, 11)
+                foreground = Color(160, 160, 160)
+            })
+            add(costCombo)
+            add(JLabel("Image:").apply {
+                font = Font("Dialog", Font.PLAIN, 11)
+                foreground = Color(160, 160, 160)
+            })
+            add(imageCombo)
         }
     }
 
@@ -140,6 +164,8 @@ class FilterToolbar {
         val rarity = rarityCombo.selectedItem as? String ?: "All"
         val target = targetCombo.selectedItem as? String ?: "All"
         val keyword = keywordCombo.selectedItem as? String ?: "All"
-        onFilterChanged?.invoke(text, type, rarity, target, keyword)
+        val cost = costCombo.selectedItem as? String ?: "All"
+        val image = imageCombo.selectedItem as? String ?: "All"
+        onFilterChanged?.invoke(text, type, rarity, target, keyword, cost, image)
     }
 }

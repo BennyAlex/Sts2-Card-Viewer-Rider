@@ -16,6 +16,7 @@ class Sts2CardViewerSettings : PersistentStateComponent<Sts2CardViewerSettings> 
     var gridDescFontSize: Int = 10
     var detailTitleFontSize: Int = 20
     var detailDescFontSize: Int = 13
+    var autoOpenSourceFile: Boolean = true
 
     override fun getState(): Sts2CardViewerSettings = this
 

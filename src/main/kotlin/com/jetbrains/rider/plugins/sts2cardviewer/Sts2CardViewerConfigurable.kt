@@ -10,6 +10,7 @@ class Sts2CardViewerConfigurable : Configurable {
     private var gridDescFontSizeField: JSpinner? = null
     private var detailTitleFontSizeField: JSpinner? = null
     private var detailDescFontSizeField: JSpinner? = null
+    private var autoOpenCheckBox: JCheckBox? = null
 
     override fun getDisplayName(): String = "STS2 Card Viewer"
 
@@ -62,6 +63,21 @@ class Sts2CardViewerConfigurable : Configurable {
         gbc.gridx = 1; gbc.gridy = 6
         panel.add(detailDescFontSizeField!!, gbc)
 
+        gbc.gridx = 0; gbc.gridy = 7
+        panel.add(JSeparator(), gbc)
+        gbc.gridx = 1; gbc.gridy = 7
+        panel.add(JLabel(""), gbc)
+
+        gbc.gridx = 0; gbc.gridy = 8
+        panel.add(JLabel("Behavior:"), gbc)
+        gbc.gridx = 1; gbc.gridy = 8
+        panel.add(JLabel(""), gbc)
+
+        autoOpenCheckBox = JCheckBox("Auto-open source file on item click", settings.autoOpenSourceFile)
+        gbc.gridx = 0; gbc.gridy = 9
+        gbc.gridwidth = 2
+        panel.add(autoOpenCheckBox!!, gbc)
+
         return panel
     }
 
@@ -70,7 +86,8 @@ class Sts2CardViewerConfigurable : Configurable {
         return gridTitleFontSizeField?.value != settings.gridTitleFontSize ||
                 gridDescFontSizeField?.value != settings.gridDescFontSize ||
                 detailTitleFontSizeField?.value != settings.detailTitleFontSize ||
-                detailDescFontSizeField?.value != settings.detailDescFontSize
+                detailDescFontSizeField?.value != settings.detailDescFontSize ||
+                autoOpenCheckBox?.isSelected != settings.autoOpenSourceFile
     }
 
     override fun apply() {
@@ -79,6 +96,7 @@ class Sts2CardViewerConfigurable : Configurable {
         settings.gridDescFontSize = (gridDescFontSizeField?.value as? Number)?.toInt() ?: 9
         settings.detailTitleFontSize = (detailTitleFontSizeField?.value as? Number)?.toInt() ?: 20
         settings.detailDescFontSize = (detailDescFontSizeField?.value as? Number)?.toInt() ?: 13
+        settings.autoOpenSourceFile = autoOpenCheckBox?.isSelected ?: true
     }
 
     override fun reset() {
@@ -87,5 +105,6 @@ class Sts2CardViewerConfigurable : Configurable {
         gridDescFontSizeField?.value = settings.gridDescFontSize
         detailTitleFontSizeField?.value = settings.detailTitleFontSize
         detailDescFontSizeField?.value = settings.detailDescFontSize
+        autoOpenCheckBox?.isSelected = settings.autoOpenSourceFile
     }
 }

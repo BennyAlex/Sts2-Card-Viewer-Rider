@@ -5,14 +5,17 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.vfs.AsyncFileListener
+import com.jetbrains.rider.plugins.sts2cardviewer.Sts2CardViewerSettings
 import com.jetbrains.rider.plugins.sts2cardviewer.model.*
 import com.jetbrains.rider.plugins.sts2cardviewer.parser.*
 import java.awt.*
+import java.io.File
 import javax.swing.*
 import javax.swing.border.EmptyBorder
 
@@ -71,12 +74,33 @@ class Sts2CardViewerPanel(private val project: Project) {
             SwingUtilities.invokeLater { loadData() }
         }
 
-        cardGrid.onCardSelected = { card: CardData -> detailPanel.showCard(card, modInfo) }
-        relicList.onRelicSelected = { relic: RelicData -> detailPanel.showRelic(relic, modInfo) }
-        filterToolbar.onFilterChanged = { text: String, type: String, rarity: String, target: String, keyword: String ->
-            applyFilters(text, type, rarity, target, keyword)
+        cardGrid.onCardSelected = { card: CardData ->
+            detailPanel.showCard(card, modInfo)
+            if (Sts2CardViewerSettings.getInstance().autoOpenSourceFile) {
+                card.filePath?.let { openSourceFile(it) }
+            }
+        }
+        relicList.onRelicSelected = { relic: RelicData ->
+            detailPanel.showRelic(relic, modInfo)
+            if (Sts2CardViewerSettings.getInstance().autoOpenSourceFile) {
+                relic.filePath?.let { openSourceFile(it) }
+            }
+        }
+        filterToolbar.onFilterChanged = { text: String, type: String, rarity: String, target: String, keyword: String, cost: String, image: String ->
+            applyFilters(text, type, rarity, target, keyword, cost, image)
         }
         languageCombo.onLanguageChanged = { langCode: String -> switchLanguage(langCode) }
+        detailPanel.onImageChanged = { className: String, isCard: Boolean ->
+            if (isCard) {
+                cardGrid.invalidateCell(className)
+                cardGrid.setCards(allCards, modInfo, allCards.size)
+                allCards.find { it.className == className }?.let { detailPanel.showCard(it, modInfo) }
+            } else {
+                relicList.setRelics(allRelics, modInfo, allRelics.size)
+                allRelics.find { it.className == className }?.let { detailPanel.showRelic(it, modInfo) }
+            }
+            Unit
+        }
 
         project.messageBus.connect().subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER,
             object : FileEditorManagerListener {
@@ -139,6 +163,7 @@ class Sts2CardViewerPanel(private val project: Project) {
             }
 
         val language = languageCombo.getCurrentLanguageCode() ?: "eng"
+        detailPanel.setCurrentLanguage(language)
         val localization = LocalizationReader.readLocalization(info.modRootPath, info.modId, language)
 
         val rawCards = CardMetadataExtractor.extractFromDirectory(info.modRootPath, info.modId)
@@ -203,6 +228,7 @@ class Sts2CardViewerPanel(private val project: Project) {
 
     private fun switchLanguage(langCode: String) {
         val info = modInfo ?: return
+        detailPanel.setCurrentLanguage(langCode)
         val localization = LocalizationReader.readLocalization(info.modRootPath, info.modId, langCode)
 
         allCards = allCards.map { card ->
@@ -234,7 +260,8 @@ class Sts2CardViewerPanel(private val project: Project) {
         tabbedPane.setTitleAt(1, "Relics (${allRelics.size})")
     }
 
-    private fun applyFilters(searchText: String, typeFilter: String, rarityFilter: String, targetFilter: String, keywordFilter: String) {
+    private fun applyFilters(searchText: String, typeFilter: String, rarityFilter: String, targetFilter: String, keywordFilter: String, costFilter: String, imageFilter: String) {
+        val info = modInfo
         val filtered = allCards.filter { card ->
             val matchesSearch = searchText.isEmpty() ||
                     card.title.contains(searchText, ignoreCase = true) ||
@@ -244,7 +271,12 @@ class Sts2CardViewerPanel(private val project: Project) {
             val matchesRarity = rarityFilter == "All" || card.rarity.equals(rarityFilter, ignoreCase = true)
             val matchesTarget = targetFilter == "All" || card.target.equals(targetFilter, ignoreCase = true)
             val matchesKeyword = keywordFilter == "All" || card.keywords.any { it.equals(keywordFilter, ignoreCase = true) }
-            matchesSearch && matchesType && matchesRarity && matchesTarget && matchesKeyword
+            val matchesCost = costFilter == "All" || card.cost.toString() == costFilter
+            val matchesImage = if (imageFilter == "All" || info == null) true else {
+                val hasImage = card.portraitPath != null && AssetPathResolver.resolveCardPortrait(info.modRootPath, info.modId, card.portraitPath) != null
+                if (imageFilter == "With Image") hasImage else !hasImage
+            }
+            matchesSearch && matchesType && matchesRarity && matchesTarget && matchesKeyword && matchesCost && matchesImage
         }
         cardGrid.setCards(filtered, modInfo, allCards.size)
     }
@@ -252,6 +284,7 @@ class Sts2CardViewerPanel(private val project: Project) {
     private fun handleFileChanges(changedPaths: List<String>) {
         val info = modInfo ?: return
         val language = languageCombo.getCurrentLanguageCode() ?: "eng"
+        detailPanel.setCurrentLanguage(language)
         val localization = LocalizationReader.readLocalization(info.modRootPath, info.modId, language)
 
         var cardsChanged = false
@@ -370,6 +403,16 @@ class Sts2CardViewerPanel(private val project: Project) {
             SwingUtilities.invokeLater {
                 tabbedPane.selectedIndex = 1
                 detailPanel.showRelic(relic, info)
+            }
+        }
+    }
+
+    private fun openSourceFile(filePath: String) {
+        val file = File(filePath)
+        if (file.exists()) {
+            val virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByPath(file.absolutePath)
+            if (virtualFile != null) {
+                FileEditorManager.getInstance(project).openFile(virtualFile, true)
             }
         }
     }
